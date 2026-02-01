@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -5,63 +6,55 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import { Asset, PlacedLayer } from "../types";
 
-/**
- * Helper to strip the data URL prefix (e.g. "data:image/png;base64,")
- */
 const getBase64Data = (dataUrl: string): string => {
   return dataUrl.split(',')[1];
 };
 
 /**
- * Generates a product mockup by compositing multiple logos onto a product image.
+ * Generates a pro mockup with staging and lighting.
  */
-export const generateMockup = async (
+export const generateProMockup = async (
   product: Asset,
   layers: { asset: Asset; placement: PlacedLayer }[],
-  instruction: string
+  instruction: string,
+  scenePrompt?: string,
+  lightingStyle: string = 'studio'
 ): Promise<string> => {
   try {
-    // Create instance here to get latest key
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const model = 'gemini-3-pro-image-preview';
+    // Switched to Flash model for Free Tier support
+    const model = 'gemini-2.5-flash-image';
 
-    // 1. Add Product Base
     const parts: any[] = [
       {
         inlineData: {
-          mimeType: product.mimeType,
+          mimeType: product.mime_type,
           data: getBase64Data(product.data),
         },
       },
     ];
 
-    // 2. Add All Logos
     let layoutHints = "";
     layers.forEach((layer, index) => {
       parts.push({
         inlineData: {
-          mimeType: layer.asset.mimeType,
+          mimeType: layer.asset.mime_type,
           data: getBase64Data(layer.asset.data),
         },
       });
-
-      // Construct simple positioning hint (assuming 0,0 is top-left)
-      const vPos = layer.placement.y < 33 ? "top" : layer.placement.y > 66 ? "bottom" : "center";
-      const hPos = layer.placement.x < 33 ? "left" : layer.placement.x > 66 ? "right" : "center";
-      
-      layoutHints += `\n- Logo ${index + 1}: Place at ${vPos}-${hPos} area (approx coords: ${Math.round(layer.placement.x)}% x, ${Math.round(layer.placement.y)}% y). Scale: ${layer.placement.scale}.`;
+      layoutHints += `\n- Logo ${index + 1}: At (${Math.round(layer.placement.x)}%, ${Math.round(layer.placement.y)}%). Scale: ${layer.placement.scale}. Opacity: ${layer.placement.opacity}.`;
     });
 
-    // 3. Add Instructions
     const finalPrompt = `
-    User Instructions: ${instruction}
+    TASK: Professional Product Mockup & Staging.
     
-    Layout Guidance based on user's rough placement on canvas:
-    ${layoutHints}
+    1. COMPOSITION: Place logos (images 2-${layers.length + 1}) onto the base product (image 1).
+    2. PLACEMENT GUIDE: ${layoutHints}
+    3. STAGING: ${scenePrompt ? `Place the product in this environment: ${scenePrompt}.` : 'Keep a clean studio background.'}
+    4. LIGHTING: Use ${lightingStyle} lighting. Ensure realistic shadows, reflections, and surface wrapping.
+    5. ADDITIONAL: ${instruction}
 
-    System Task: Composite the provided logo images (images 2-${layers.length + 1}) onto the first image (the product) to create a realistic product mockup. 
-    Follow the Layout Guidance for positioning if provided, but prioritize realistic surface warping, lighting, and perspective blending.
-    Output ONLY the resulting image.
+    Output ONLY the resulting high-fidelity staged image.
     `;
 
     parts.push({ text: finalPrompt });
@@ -69,112 +62,69 @@ export const generateMockup = async (
     const response = await ai.models.generateContent({
       model,
       contents: { parts },
-      config: {
-        responseModalities: [Modality.IMAGE],
-      },
+      config: { responseModalities: [Modality.IMAGE] },
     });
 
-    const candidates = response.candidates;
-    if (candidates && candidates[0]?.content?.parts) {
-        for (const part of candidates[0].content.parts) {
-            if (part.inlineData && part.inlineData.data) {
-                 return `data:image/png;base64,${part.inlineData.data}`;
-            }
-        }
-    }
-    throw new Error("No image data found in response");
-
+    const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+    if (part?.inlineData?.data) return `data:image/png;base64,${part.inlineData.data}`;
+    
+    throw new Error("Generation failed");
   } catch (error) {
-    console.error("Mockup generation failed:", error);
+    console.error("Pro Mockup failed:", error);
     throw error;
   }
 };
 
-/**
- * Generates a new logo or product base from scratch using text.
- */
 export const generateAsset = async (prompt: string, type: 'logo' | 'product'): Promise<string> => {
    try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    const model = 'gemini-3-pro-image-preview';
+    // Switched to Flash model for Free Tier support
+    const model = 'gemini-2.5-flash-image';
     
     const enhancedPrompt = type === 'logo' 
-        ? `A high-quality, professional vector-style logo design of a ${prompt}. Isolated on a pure white background. Minimalist and clean, single distinct logo.`
-        : `Professional studio product photography of a single ${prompt}. Ghost mannequin style or flat lay. Front view, isolated on neutral background. High resolution, photorealistic. Single object only, no stacks, no duplicates.`;
+        ? `A high-quality logo design of ${prompt}. Vector style, flat design, white background.`
+        : `Professional studio shot of ${prompt}. Clean background, 4k, realistic product photography.`;
 
     const response = await ai.models.generateContent({
         model,
-        contents: {
-            parts: [{ text: enhancedPrompt }]
-        },
-        config: {
-            responseModalities: [Modality.IMAGE],
-        }
+        contents: { parts: [{ text: enhancedPrompt }] },
+        config: { responseModalities: [Modality.IMAGE] }
     });
 
-    const candidates = response.candidates;
-    if (candidates && candidates[0]?.content?.parts) {
-        for (const part of candidates[0].content.parts) {
-            if (part.inlineData && part.inlineData.data) {
-                 return `data:image/png;base64,${part.inlineData.data}`;
-            }
-        }
-    }
-     throw new Error("No image generated");
-
+    const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+    if (part?.inlineData?.data) return `data:image/png;base64,${part.inlineData.data}`;
+    throw new Error("No image generated");
    } catch (error) {
        console.error("Asset generation failed:", error);
        throw error;
    }
 }
 
-/**
- * Takes a raw AR composite and makes it photorealistic.
- */
 export const generateRealtimeComposite = async (
     compositeImageBase64: string,
     prompt: string = "Make this look like a real photo"
   ): Promise<string> => {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const model = 'gemini-3-pro-image-preview';
+      // Switched to Flash model for Free Tier support
+      const model = 'gemini-2.5-flash-image';
   
       const parts = [
-        {
-          inlineData: {
-            mimeType: 'image/png',
-            data: getBase64Data(compositeImageBase64),
-          },
-        },
-        {
-          text: `Input is a rough AR composite. Task: ${prompt}. 
-          Render the overlaid object naturally into the scene. 
-          Match the lighting, shadows, reflections, and perspective of the background. 
-          Keep the background largely as is, but blend the object seamlessly.
-          Output ONLY the resulting image.`,
-        },
+        { inlineData: { mimeType: 'image/png', data: getBase64Data(compositeImageBase64) } },
+        { text: `${prompt}. Seamlessly blend elements, match lighting/perspective. Output IMAGE only.` }
       ];
   
       const response = await ai.models.generateContent({
         model,
         contents: { parts },
-        config: {
-          responseModalities: [Modality.IMAGE],
-        },
+        config: { responseModalities: [Modality.IMAGE] },
       });
   
-      const candidates = response.candidates;
-      if (candidates && candidates[0]?.content?.parts) {
-          for (const part of candidates[0].content.parts) {
-              if (part.inlineData && part.inlineData.data) {
-                   return `data:image/png;base64,${part.inlineData.data}`;
-              }
-          }
-      }
-      throw new Error("No image data found in response");
-  
+      const part = response.candidates?.[0]?.content?.parts.find(p => p.inlineData);
+      if (part?.inlineData?.data) return `data:image/png;base64,${part.inlineData.data}`;
+      throw new Error("Composite failed");
     } catch (error) {
-      console.error("AR Composite generation failed:", error);
+      console.error("AR Composite failed:", error);
       throw error;
     }
   };

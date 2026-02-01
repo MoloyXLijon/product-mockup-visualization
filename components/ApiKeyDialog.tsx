@@ -1,3 +1,4 @@
+
 /**
  * @license
  * SPDX-License-Identifier: Apache-2.0
@@ -16,28 +17,20 @@ const ApiKeyDialog: React.FC<ApiKeyDialogProps> = ({ onContinue }) => {
         <div className="bg-indigo-600/20 p-4 rounded-full mb-6">
           <KeyRound className="w-12 h-12 text-indigo-400" />
         </div>
-        <h2 className="text-3xl font-bold text-white mb-4">Paid API Key Required</h2>
+        <h2 className="text-3xl font-bold text-white mb-4">API Key Required</h2>
         <p className="text-zinc-300 mb-6">
-          This application uses premium AI models.
+          This application uses Gemini AI models.
           <br/>
-          You must select a <strong>Paid Google Cloud Project</strong> API key to proceed.
+          Please select your <strong>Google Cloud Project</strong> API key to proceed.
         </p>
         <p className="text-zinc-400 mb-8 text-sm">
-          Free tier keys will not work. For more information, see{' '}
-          <a
-            href="https://ai.google.dev/gemini-api/docs/billing"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-indigo-400 hover:underline font-medium"
-          >
-            Billing Documentation
-          </a>.
+          Both Free Tier and Paid keys are supported.
         </p>
         <button
           onClick={onContinue}
           className="w-full px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-lg transition-colors text-lg shadow-lg shadow-indigo-500/20"
         >
-          Select Paid API Key
+          Select API Key
         </button>
       </div>
     </div>
