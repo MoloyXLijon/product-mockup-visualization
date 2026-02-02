@@ -1,47 +1,20 @@
+<div align="center">
+<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+</div>
 
-# SKU Foundry Pro - Local Setup
+# Run and deploy your AI Studio app
 
-## Prerequisites
-1. PHP >= 8.2
-2. Composer
-3. Node.js & npm
-4. MySQL Database (e.g., via WAMP/XAMPP/Docker)
+This contains everything you need to run your app locally.
 
-## 1. Backend Setup (Laravel)
+View your app in AI Studio: https://ai.studio/apps/drive/1kMvDk5v-dXYlXbcrcW2hPTETApZa815a
 
-Open a terminal in the root directory:
+## Run Locally
 
-```bash
-# Install PHP dependencies
-composer install
+**Prerequisites:**  Node.js
 
-# Create environment file (if you haven't already)
-cp .env.example .env
 
-# Generate Application Key
-php artisan key:generate
-
-# Configure your database in .env (DB_DATABASE, DB_USERNAME, DB_PASSWORD)
-# Then run migrations:
-php artisan migrate
-
-# Start the Laravel Server (Port 8000)
-php artisan serve
-```
-
-## 2. Frontend Setup (React/Vite)
-
-Open a **new** terminal in the root directory:
-
-```bash
-# Install Node dependencies
-npm install
-
-# Start the Vite Development Server (Port 5173)
-npm run dev
-```
-
-## 3. Access
-Open your browser to: `http://localhost:5173`
-
-The frontend (5173) will proxy API requests to the backend (8000).
+1. Install dependencies:
+   `npm install`
+2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
+3. Run the app:
+   `npm run dev`
